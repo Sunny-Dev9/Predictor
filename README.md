@@ -1,215 +1,108 @@
-# StudyGen — Agentic AI Study Planner 🎓🤖
+# Portfolio Health Advisor, Starter Repo
 
-[![CI/CD Pipeline](https://github.com/studygen/studygen/actions/workflows/ci.yml/badge.svg)](https://github.com/studygen/studygen/actions/workflows/ci.yml)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg?logo=fastapi)](https://fastapi.tiangolo.com)
-[![LangGraph](https://img.shields.io/badge/LangGraph-Multi--Agent-FF6F00.svg)](https://langchain-ai.github.io/langgraph/)
-[![Next.js](https://img.shields.io/badge/Next.js-14-black.svg?logo=next.js)](https://nextjs.org)
-[![Qdrant](https://img.shields.io/badge/VectorDB-Qdrant-red.svg)](https://qdrant.tech)
-[![MLflow](https://img.shields.io/badge/MLOps-MLflow-blue.svg)](https://mlflow.org)
-
-> **"StudyGen is an adaptive AI learning assistant that doesn't just generate a static timetable. It continuously observes a student's goals, syllabus, available time, study progress, quiz performance, weak topics, uploaded learning material, and upcoming exams, then plans, evaluates, remembers, and replans the student's learning journey."**
+**Theme:** Agentic AI
+**Hackathon:** ACM Student Chapter Hackathon
+**Duration:** 8 hours (offline)
 
 ---
 
-## 🌟 The Intelligence Loop
+## Problem Statement
 
-Unlike basic LLM wrappers (`User → LLM → Response`), StudyGen is powered by **LangGraph** orchestrating 7 specialized autonomous agents over a shared state graph:
+Retail investors often have a portfolio spread across several
+stocks/funds but no easy way to understand it holistically how much
+they've actually gained, how concentrated their risk is, and what they
+should consider doing about it. You're going to automate a simplified
+version of that reasoning process using a two-agent pipeline.
 
-$$\text{PLAN} \longrightarrow \text{LEARN} \longrightarrow \text{MEASURE} \longrightarrow \text{REMEMBER} \longrightarrow \text{ADAPT} \longrightarrow \text{REPLAN}$$
+### Your Task
 
-```mermaid
-graph TD
-    A[Student Onboarding & Exam Deadlines] --> B[Syllabus Analyzer Agent]
-    B --> C[Learning Graph & Topic Hierarchy]
-    C --> D[Planning Agent / SmartScheduler]
-    D --> E[Adaptive 14-Day Study Plan]
-    E --> F[Focused Study Session]
-    F --> G[Quiz Agent: Diagnostic MCQs]
-    G --> H[Performance Agent: Mastery Evaluation]
-    H -->|Score < 50% or Weak Topic| I[Replanning Agent]
-    H -->|Score >= 75%| J[Advance to Next Node]
-    I -->|Inject 2 Remedial Sessions| E
-    J --> K[Memory Agent: Update Learner Profile]
-    K --> E
-    F -.-> L[Tutor RAG Agent: PyMuPDF + Qdrant Citations]
-```
+Build a **two-agent pipeline**:
 
----
+**Agent 1 Analyst Agent**
+- Reads the provided portfolio data (`sample_data/sample_portfolio.csv`)
+- Calls two tools:
+  - **Return Calculator** — current value & gain/loss per holding and
+    overall
+  - **Allocation Breakdown** — % concentration by sector/asset class
+- Outputs structured findings (facts only, no advice yet)
 
-## 🏛️ System Architecture
+**Agent 2 — Advisor Agent**
+- Takes Agent 1's structured findings as input
+- Reasons over them (no new tools needed) and produces a short,
+  plain-English summary with 1–2 actionable suggestions
 
-```mermaid
-flowchart TB
-    subgraph Frontend [Next.js 14 Web Application]
-        UI[Glassmorphic SaaS Dashboard]
-        Planner[Interactive Timeline & Calendar]
-        Tutor[Grounded RAG Chat]
-        QuizUI[Adaptive Diagnostic Quiz Interface]
-        MLSandbox[Interactive Topic Mastery Predictor Sandbox]
-    end
+This is a **sequential handoff**: Agent 1's output → Agent 2's input.
 
-    subgraph Backend [FastAPI Asynchronous Engine]
-        API[RESTful API Endpoints]
-        Auth[JWT Authentication & PBKDF2 Hashing]
-        DB[(PostgreSQL / SQLite Dual Engine)]
-        Metrics[Prometheus Exporter /metrics]
-    end
+### Core Requirements (must-have)
 
-    subgraph MultiAgent [LangGraph Multi-Agent Orchestration]
-        Agent1[SyllabusAnalyzerAgent]
-        Agent2[PlanningAgent - SmartScheduler]
-        Agent3[TutorRAGAgent]
-        Agent4[QuizAgent]
-        Agent5[PerformanceAgent]
-        Agent6[ReplanningAgent]
-        Agent7[MemoryAgent]
-    end
+1. Load portfolio data from `sample_data/sample_portfolio.csv`.
+2. Analyst Agent computes findings using both tools.
+3. Advisor Agent converts findings into a readable recommendation.
+4. Present both the findings and the final advice through a simple
+   interface (CLI, notebook, or web UI your choice).
 
-    subgraph RAGPipeline [Multimodal RAG Pipeline]
-        PDFParser[PyMuPDF Page Extractor]
-        Chunker[Overlapping Sliding Window Chunker]
-        Vectors[(Qdrant Vector Database)]
-    end
+### Creative Extension Space (open-ended, graded separately)
 
-    subgraph MLOps [MLOps & Predictive Engine]
-        RandomForest[Scikit-Learn Mastery Predictor]
-        MLflowServer[MLflow Tracking Server]
-        DVCPipeline[DVC Pipeline - dvc.yaml]
-    end
+- Tax-impact estimator tool (simple capital gains estimate)
+- Finance news/sentiment tool feeding into the Advisor Agent's reasoning
+- "What-if" rebalance simulation
+- A third agent (e.g. a Risk Agent) extending the pipeline
+- Multi-turn Q&A on top of the final advice (e.g. "why is my risk high?")
 
-    UI <-->|JSON / Bearer Token| API
-    API --> MultiAgent
-    MultiAgent --> DB
-    Agent3 --> RAGPipeline
-    PDFParser --> Chunker --> Vectors
-    Agent5 --> RandomForest
-    RandomForest --> MLflowServer
-```
+We want to see what *you* think makes portfolio advice actually useful.
+Surprise us.
+
+### Constraints
+
+- No training/fine-tuning models from scratch, use an LLM API (free-tier)
+  or a local model for the agent reasoning steps.
+- Tools should be plain Python functions operating on the static sample
+  data no real brokerage/market API integration required.
+- Must run/demo on your own laptop (no paid infra dependency).
+- Final submission = last commit pushed to your repo, submitted via the
+  Google Form before the deadline.
 
 ---
 
-## 🤖 The 7 Specialized Agents
+## Setup
 
-1. **Syllabus Analyzer Agent**: Parses raw unstructured course syllabi, deconstructs them into topics and subtopics, estimates difficulty ($0.1\text{--}1.0$), and maps prerequisite dependency edges.
-2. **Planning Agent (SmartScheduler)**: Constraint-based heuristic optimizer balancing daily available hours (e.g. 3 hrs/day), preferred study windows, spaced repetition intervals, 10-minute rest breaks, and upcoming exam deadlines.
-3. **Tutor RAG Agent**: Answers student questions grounded strictly in uploaded study notes and textbooks with page citations and zero hallucination.
-4. **Quiz Agent**: Synthesizes challenging academic MCQs and conceptual questions tailored to individual weak areas.
-5. **Performance Agent**: Evaluates student test submissions, calculates composite topic mastery, and triggers conditional transitions.
-6. **Replanning Agent**: Detects when a student falls behind or fails a topic ($<50\%$), automatically shifting upcoming days to inject remedial revisions without derailing exam preparedness.
-7. **Memory Agent**: Persists learner habits, strengths, weaknesses, and preferred pacing across sessions.
-
----
-
-## 🧠 Adaptive Mastery & ML Predictor
-
-StudyGen employs a transparent, modular formula:
-
-$$\text{mastery} = 0.4 \times \text{quiz\_performance} + 0.2 \times \text{completion} + 0.2 \times \text{consistency} + 0.2 \times \text{recent\_score}$$
-
-Alongside the transparent formula, an offline-trained **Random Forest Classifier** tracks the probability of a student mastering a topic before the exam:
-- **Features**: `quiz_score_avg`, `study_duration_hrs`, `session_count`, `topic_difficulty`, `completion_rate`, `recent_quiz_score`, `revision_frequency`.
-- **Metrics Evaluated**: Accuracy ($66\%$), Precision ($62\%$), Recall ($54\%$), F1 ($0.57$), ROC-AUC ($0.73$).
-- **Logged with**: MLflow tracking server and DVC pipeline.
-
----
-
-## 🚀 10-Step Hackathon Demo Scenario
-
-You can demonstrate the complete end-to-end intelligence loop in 2 minutes:
-
-1. **Click "Load Demo Scenario"** in the top navbar.
-2. **Observe Constraints**: Student has final exams in 20 days, 3.0 available study hours/day in the Evening window.
-3. **Inspect Subjects**: Data Structures & Algorithms, DBMS, Operating Systems, Machine Learning.
-4. **Examine Binary Trees**: Initial mastery is set to low ($45\%$).
-5. **Inspect Smart Schedule**: Every scheduled block has an explainable reason (*"Scheduled because low mastery (45%) + exam in 20 days"*).
-6. **Take Diagnostic Quiz**: Answer 4 questions on Binary Trees and AVL rotations.
-7. **Submit Quiz**: Score $45\%$ triggers `PerformanceAgent`.
-8. **Watch Adaptive Replanning**: `ReplanningAgent` dynamically shifts future days, adding 2 remedial sessions and reducing repetition on mastered topics (Arrays: 85%).
-9. **Chat with AI Tutor**: Ask *"Explain AVL trees using my notes"*. The Tutor RAG agent retrieves exact excerpts from `DSA_Lecture_Notes_Trees_AVL.pdf` (Pages 1 and 2) with grounded citations!
-10. **Simulate ML Mastery**: Visit the **ML & Analytics** tab to test feature sliders and calculate live Random Forest retention probabilities.
-
----
-
-## 🛠️ Technology Stack
-
-| Layer | Technologies |
-| :--- | :--- |
-| **Frontend** | Next.js 14, React 18, TypeScript, Tailwind CSS, Lucide React, Recharts |
-| **Backend** | Python 3.11+, FastAPI, SQLAlchemy 2.0 (Async), Pydantic v2, aiosqlite / asyncpg |
-| **Agent Orchestration** | LangGraph, LangChain Core |
-| **RAG & Vector DB** | PyMuPDF (`fitz`), Qdrant Vector DB, In-Memory Cosine Fallback |
-| **LLM Layer** | Abstract Provider Architecture: `OpenAIProvider`, `GeminiProvider`, `MockProvider` |
-| **Machine Learning** | Scikit-Learn (Random Forest, Logistic Regression), Pandas, NumPy, Joblib |
-| **MLOps & DevOps** | MLflow, DVC, Docker, Docker Compose, Prometheus, Grafana, GitHub Actions |
-
----
-
-## ⚡ Quickstart & Setup Instructions
-
-### 1. Clone the repository
 ```bash
-git clone https://github.com/studygen/studygen.git
-cd studygen
-```
+git clone <your-team-repo-url>
+cd p2
 
-### 2. Configure Environment Variables
-```bash
+python -m venv venv
+source venv/bin/activate      # on Windows: venv\Scripts\activate
+
+pip install -r requirements.txt
+
 cp .env.example .env
-```
-*(By default, `DEFAULT_LLM_PROVIDER=mock` and `QDRANT_URL=:memory:`, so the application runs 100% out of the box with zero external dependencies or API keys required!)*
-
-### 3. Run Backend (FastAPI)
-```bash
-cd backend
-python -m pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
-```
-- API Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
-- Prometheus Metrics: [http://localhost:8000/metrics](http://localhost:8000/metrics)
-
-### 4. Run Frontend (Next.js)
-```bash
-cd frontend
-npm install
-npm run dev
-```
-- Open [http://localhost:3000](http://localhost:3000) in your browser.
-- Click **"1-Click Hackathon Demo Login"** to start immediately.
-
-### 5. Run ML Model Training & MLflow Logging
-```bash
-python ml/training/train.py
+# then edit .env and add your free-tier key
 ```
 
-### 6. Run Test Suite
-```bash
-cd backend
-python -m pytest -v
-```
-
-### 7. Run Full Docker Stack
-```bash
-docker-compose up --build
-```
-Services spun up:
-- Frontend: `http://localhost:3000`
-- Backend: `http://localhost:8000`
-- MLflow: `http://localhost:5000`
-- Prometheus: `http://localhost:9090`
-- Grafana: `http://localhost:3001`
-- Qdrant: `http://localhost:6333`
-- PostgreSQL: `localhost:5432`
+You do **not** need a paid API key. Free tiers (Groq, Gemini, OpenAI trial
+credits, or a local model via Ollama/HF) are all acceptable — pick
+whatever's easiest for your team to set up quickly.
 
 ---
 
-## 🔒 Security & Privacy
+## Submission
 
-- PBKDF2 SHA-256 cryptographic password hashing with unique salt.
-- Cryptographically signed JWT Bearer authentication tokens.
-- Strict input validation via Pydantic models.
-- Learner memory agent preserves zero sensitive personal data.
+1. Make sure your final code is committed and pushed.
+2. Copy your **final commit hash** (`git log -1 --format="%H"`).
+3. Submit it via the Google Form shared by the organizers, along with your
+   team name/ID.
+4. Judging happens at 3 checkpoints during the event.
 
 ---
 
-## 📜 License
-MIT License. Built for hackathon demonstration.
+## Evaluation
+
+Full judging rubric:
+
+| Criterion | Weight |
+|---|---|
+| Core Functionality | 40% |
+| Code Quality & Repo Hygiene | 15% |
+| UI/UX | 15% |
+| Creativity / Extra Features | 20% |
+| Presentation & Demo Clarity | 10% |
